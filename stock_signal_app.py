@@ -98,7 +98,7 @@ st.markdown(
     <div style='text-align: center;'>
     📬 Developed by <b>Ahmad Ahsan Akbar</b>
     🌐 <a href='https://ahmad-ahsan-akbar.me' target='_blank'>ahmad-ahsan-akbar.me</a> &nbsp; | &nbsp;
-        📘 <a href='https://www.facebook.com/ahmadahsanakbar' target='_blank'>Facebook</a>"
+        📘 <a href='https://www.facebook.com/ahmadahsanakbar' target='_blank'>Facebook</a>
     </div>
     """,
     unsafe_allow_html=True
