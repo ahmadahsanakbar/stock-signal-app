@@ -9,14 +9,14 @@ from io import StringIO
 
 # Configure the page
 st.set_page_config(
-    page_title="Stock Signal Analyzer by Ahmad",
+    page_title="Stock Signal Analyzer by Ahmad Ahsan Akbar",
     page_icon="📈",
     layout="wide"
 )
 
 # Branding Header
 st.title("📊 Stock Signal Analyzer")
-st.caption("Developed by Ahmad")
+st.caption("Developed by Ahmad Ahsan Akbar")
 
 # File uploader
 uploaded_file = st.file_uploader("Upload CSV file with Date and Close columns", type=["csv"])
@@ -95,7 +95,7 @@ if uploaded_file is not None:
 st.markdown("""---""")
 st.markdown(
     "<div style='text-align: center;'>"
-    "📬 Developed with ❤️ by <b>Ahmad</b>"
+    "📬 Developed by <b>Ahmad Ahsan Akbar</b>"
     "</div>",
     unsafe_allow_html=True
 )
