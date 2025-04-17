@@ -26,7 +26,7 @@ EMAIL_ADDRESS = st.secrets.get("EMAIL_ADDRESS", "")  # Put in Streamlit secrets 
 EMAIL_PASSWORD = st.secrets.get("EMAIL_PASSWORD", "")
 
 # Moving Average function
-def generate_signals(df, short_window=20, long_window=50):
+def generate_signals(df, short_window=2, long_window=5):
     df["Short_MA"] = df["Close"].rolling(window=short_window).mean()
     df["Long_MA"] = df["Close"].rolling(window=long_window).mean()
 
