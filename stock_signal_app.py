@@ -1,3 +1,16 @@
+st.set_page_config(
+    page_title="Stock Signal Analyzer by Ahmad Ahsan Akbar",
+    page_icon="📈",
+    layout="wide"
+)
+
+st.markdown("### Developed by **Ahmad Ahsan Akbar**")
+
+st.title("Stock Signal Analyzer by Ahmad Ahsan Akbar")
+
+st.caption("Developed by Ahmad Ahsan Akbar")
+
+
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
