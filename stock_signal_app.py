@@ -25,15 +25,6 @@ st.sidebar.header("📁 Upload CSV File")
 uploaded_file = st.sidebar.file_uploader("Choose a CSV file", type=["csv"])
 
 # -------------------- SAMPLE CSV --------------------
-if st.sidebar.button("📄 Download Sample CSV"):
-    sample_df = pd.DataFrame({
-        'Date': pd.date_range(end=pd.Timestamp.today(), periods=100).strftime('%Y-%m-%d'),
-        'Close': np.random.normal(100, 5, size=100).round(2)
-    })
-    sample_df.to_csv("sample_stock_data.csv", index=False)
-    st.sidebar.success("Sample file downloaded as 'sample_stock_data.csv'")
-    st.sidebar.download_button(label="Download Sample CSV", data=sample_df.to_csv(index=False), file_name='sample_stock_data.csv', mime='text/csv')
-
 import os
 
 # Read the sample CSV file
