@@ -1,105 +1,129 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from datetime import datetime
+import matplotlib.pyplot as plt
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from io import StringIO
+from ta.momentum import RSIIndicator
+from ta.trend import MACD
+from ta.volatility import BollingerBands
+import datetime
 
-# Configure the page
-st.set_page_config(
-    page_title="Stock Signal Analyzer by Ahmad Ahsan Akbar",
-    page_icon="📈",
-    layout="wide"
-)
+# -------------------- CONFIG --------------------
+EMAIL_ADDRESS = 'your_email@gmail.com'
+EMAIL_PASSWORD = 'your_password'
+WHATSAPP_WEBHOOK_URL = ''  # Placeholder if using Twilio or CallMeBot
 
-# Branding Header
-st.title("📊 Stock Signal Analyzer")
-st.caption("Developed by Ahmad Ahsan Akbar")
+# -------------------- TITLE --------------------
+st.set_page_config(page_title="📈 Smart Stock Signal Advisor")
+st.title("📊 Stock Analysis & Signal Generator")
+st.markdown("Developed by **Ahmad Ahsan Akbar**  |  [🌐 Website](https://ahmad-ahsan-akbar.me)  |  [📘 Facebook](https://facebook.com/ahmadahsan.akbar)")
 
-# File uploader
-uploaded_file = st.file_uploader("Upload CSV file with Date and Close columns", type=["csv"])
+# -------------------- FILE UPLOAD --------------------
+st.sidebar.header("📁 Upload CSV File")
+uploaded_file = st.sidebar.file_uploader("Choose a CSV file", type=["csv"])
 
-# Email configuration
-EMAIL_ADDRESS = st.secrets.get("EMAIL_ADDRESS", "")  # Put in Streamlit secrets for security
-EMAIL_PASSWORD = st.secrets.get("EMAIL_PASSWORD", "")
+# -------------------- SAMPLE CSV --------------------
+if st.sidebar.button("📄 Download Sample CSV"):
+    sample_df = pd.DataFrame({
+        'Date': pd.date_range(end=pd.Timestamp.today(), periods=100).strftime('%Y-%m-%d'),
+        'Close': np.random.normal(100, 5, size=100).round(2)
+    })
+    sample_df.to_csv("sample_stock_data.csv", index=False)
+    st.sidebar.success("Sample file downloaded as 'sample_stock_data.csv'")
+    st.sidebar.download_button(label="Download Sample CSV", data=sample_df.to_csv(index=False), file_name='sample_stock_data.csv', mime='text/csv')
 
-# Moving Average function
-def generate_signals(df, short_window=2, long_window=5):
-    df["Short_MA"] = df["Close"].rolling(window=short_window).mean()
-    df["Long_MA"] = df["Close"].rolling(window=long_window).mean()
+# -------------------- APP LOGIC --------------------
+if uploaded_file:
+    data = pd.read_csv(uploaded_file)
+    data['Date'] = pd.to_datetime(data['Date'])
+    data = data.sort_values('Date')
 
-    df["Signal"] = 0
-    df["Signal"][short_window:] = np.where(df["Short_MA"][short_window:] > df["Long_MA"][short_window:], 1, -1)
-    df["Position"] = df["Signal"].diff()
+    # Sliders for MA windows
+    short_window = st.sidebar.slider("Short Moving Average", min_value=3, max_value=50, value=5)
+    long_window = st.sidebar.slider("Long Moving Average", min_value=10, max_value=200, value=20)
 
-    return df
+    # Moving Averages
+    data['Short_MA'] = data['Close'].rolling(window=short_window).mean()
+    data['Long_MA'] = data['Close'].rolling(window=long_window).mean()
 
-# Send email alert
-def send_email(subject, body, to_email):
-    msg = MIMEMultipart()
-    msg["From"] = EMAIL_ADDRESS
-    msg["To"] = to_email
-    msg["Subject"] = subject
+    # RSI
+    data['RSI'] = RSIIndicator(close=data['Close'], window=14).rsi()
 
-    msg.attach(MIMEText(body, "plain"))
+    # MACD
+    macd = MACD(close=data['Close'])
+    data['MACD'] = macd.macd()
+    data['MACD_Signal'] = macd.macd_signal()
 
-    with smtplib.SMTP("smtp.gmail.com", 587) as server:
-        server.starttls()
-        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-        server.sendmail(EMAIL_ADDRESS, to_email, msg.as_string())
+    # Bollinger Bands
+    bb = BollingerBands(close=data['Close'])
+    data['BB_High'] = bb.bollinger_hband()
+    data['BB_Low'] = bb.bollinger_lband()
 
-# Process file
-if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
+    # Signal Generation
+    data['Signal'] = 0
+    data.loc[(data['Short_MA'] > data['Long_MA']) & (data['Short_MA'].shift(1) <= data['Long_MA'].shift(1)), 'Signal'] = 1  # Buy
+    data.loc[(data['Short_MA'] < data['Long_MA']) & (data['Short_MA'].shift(1) >= data['Long_MA'].shift(1)), 'Signal'] = -1  # Sell
+    data['Position'] = data['Signal'].cumsum()
 
-    try:
-        df["Date"] = pd.to_datetime(df["Date"])
-        df.sort_values("Date", inplace=True)
-        df.reset_index(drop=True, inplace=True)
+    # Visual Chart
+    st.subheader("📈 Stock Price & Trading Signals")
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(data['Date'], data['Close'], label='Close Price', color='lightgray')
+    ax.plot(data['Date'], data['Short_MA'], label=f'Short MA ({short_window})', color='blue')
+    ax.plot(data['Date'], data['Long_MA'], label=f'Long MA ({long_window})', color='red')
+    ax.plot(data['Date'], data['BB_High'], label='BB High', linestyle='--', alpha=0.3)
+    ax.plot(data['Date'], data['BB_Low'], label='BB Low', linestyle='--', alpha=0.3)
+    ax.scatter(data.loc[data['Signal'] == 1]['Date'], data.loc[data['Signal'] == 1]['Close'], label='Buy', marker='^', color='green', s=100)
+    ax.scatter(data.loc[data['Signal'] == -1]['Date'], data.loc[data['Signal'] == -1]['Close'], label='Sell', marker='v', color='red', s=100)
+    ax.legend()
+    ax.grid(True)
+    st.pyplot(fig)
 
-        # Generate signals
-        df = generate_signals(df)
+    # Latest Signal
+    latest_signal = data['Signal'].iloc[-1]
+    if latest_signal == 1:
+        st.success("📈 Latest Signal: BUY")
+    elif latest_signal == -1:
+        st.error("🔻 Latest Signal: SELL")
+    else:
+        st.info("ℹ️ Latest Signal: No new signal")
 
-        # Display table
-        st.subheader("Processed Stock Data")
-        st.dataframe(df.tail(10))
+    # Save results to CSV
+    data.to_csv("stock_signal_results.csv", index=False)
+    st.download_button("💾 Download Result CSV", data=data.to_csv(index=False), file_name="stock_signal_results.csv", mime='text/csv')
 
-        # Find and send alerts
-        if df["Position"].iloc[-1] == 1:
-            signal = "Buy Signal Triggered 📈"
-        elif df["Position"].iloc[-1] == -1:
-            signal = "Sell Signal Triggered 📉"
-        else:
-            signal = "No new signal."
+    # Email Alerts
+    def send_email_alert(signal):
+        subject = f"Stock Alert: {'BUY' if signal == 1 else 'SELL'}"
+        body = f"Signal: {'BUY' if signal == 1 else 'SELL'}\n\nDate: {data['Date'].iloc[-1]}\nPrice: {data['Close'].iloc[-1]}"
+        msg = MIMEMultipart()
+        msg['From'] = EMAIL_ADDRESS
+        msg['To'] = EMAIL_ADDRESS
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
 
-        st.subheader("📢 Latest Signal")
-        st.write(signal)
+        try:
+            server = smtplib.SMTP('smtp.gmail.com', 587)
+            server.starttls()
+            server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+            server.send_message(msg)
+            server.quit()
+            st.success("✅ Email alert sent!")
+        except Exception as e:
+            st.warning(f"Email failed: {e}")
 
-        # Optional email alert
-        if signal != "No new signal.":
-            to_email = st.text_input("Enter email to receive alert:")
-            if st.button("Send Alert"):
-                send_email("Stock Signal Alert", f"{signal} on {df['Date'].iloc[-1].date()}", to_email)
-                st.success("Email alert sent!")
+    if latest_signal in [1, -1]:
+        send_email_alert(latest_signal)
 
-        # Export to CSV
-        csv = df.to_csv(index=False)
-        st.download_button("Download Processed CSV", csv, "processed_stock_data.csv", "text/csv")
+    # WhatsApp Alerts (Placeholder)
+    if WHATSAPP_WEBHOOK_URL:
+        st.info("🔔 WhatsApp alert would be sent here (integrate with Twilio/CallMeBot)")
 
-    except Exception as e:
-        st.error(f"Error: {e}")
+    # RSI / MACD Table
+    st.subheader("📊 Technical Indicators")
+    st.dataframe(data[['Date', 'RSI', 'MACD', 'MACD_Signal']].tail(10))
 
-# Footer with branding
-st.markdown("""---""")
-st.markdown(
-    """
-    <div style='text-align: center;'>
-    📬 Developed by <b>Ahmad Ahsan Akbar</b>
-    🌐 <a href='https://ahmad-ahsan-akbar.me' target='_blank'>ahmad-ahsan-akbar.me</a> &nbsp; | &nbsp;
-        📘 <a href='https://www.facebook.com/ahmadahsanakbar' target='_blank'>Facebook</a>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+else:
+    st.info("⬆️ Upload a CSV file to get started")
