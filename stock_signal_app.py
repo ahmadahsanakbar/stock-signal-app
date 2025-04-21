@@ -18,7 +18,7 @@ WHATSAPP_WEBHOOK_URL = ''  # Placeholder if using Twilio or CallMeBot
 # -------------------- TITLE --------------------
 st.set_page_config(page_title="📈 Smart Stock Signal Advisor")
 st.title("📊 Stock Analysis & Signal Generator")
-st.markdown("Developed by **Ahmad Ahsan Akbar**  |  [🌐 Website](https://ahmad-ahsan-akbar.me)  |  [📘 Facebook](https://facebook.com/ahmadahsan.akbar)")
+st.markdown("Developed by **Ahmad Ahsan Akbar**  |  [🌐 Website](https://ahmad-ahsan-akbar.me)  |  [📘 Facebook](https://facebook.com/ahmadahsanakbar)")
 
 # -------------------- FILE UPLOAD --------------------
 st.sidebar.header("📁 Upload CSV File")
@@ -33,6 +33,21 @@ if st.sidebar.button("📄 Download Sample CSV"):
     sample_df.to_csv("sample_stock_data.csv", index=False)
     st.sidebar.success("Sample file downloaded as 'sample_stock_data.csv'")
     st.sidebar.download_button(label="Download Sample CSV", data=sample_df.to_csv(index=False), file_name='sample_stock_data.csv', mime='text/csv')
+
+import os
+
+# Read the sample CSV file
+with open("sample_stock_data.csv", "rb") as file:
+    sample_bytes = file.read()
+
+# Add a download button in the sidebar or main area
+st.sidebar.download_button(
+    label="📥 Download Sample CSV",
+    data=sample_bytes,
+    file_name="sample_stock_data.csv",
+    mime="text/csv"
+)
+
 
 # -------------------- APP LOGIC --------------------
 if uploaded_file:
